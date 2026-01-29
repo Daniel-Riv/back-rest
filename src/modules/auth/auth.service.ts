@@ -10,19 +10,16 @@ export class AuthService {
   private validateEmail(email: string) {
     const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!email || !regex.test(email)) {
-      throw new HttpError(400, "Email inválido");
+      throw new HttpError(400, "auth.invalidEmail");
     }
   }
 
   private validatePassword(password: string) {
     if (!password || password.length < 8) {
-      throw new HttpError(400, "La contraseña debe tener mínimo 8 caracteres");
+      throw new HttpError(400, "auth.passwordMinLength");
     }
     if (!/[A-Z]/.test(password) || !/[0-9]/.test(password)) {
-      throw new HttpError(
-        400,
-        "La contraseña debe contener una mayúscula y un número"
-      );
+      throw new HttpError(400, "auth.passwordRequiresUppercaseNumber");
     }
   }
 
@@ -40,15 +37,15 @@ export class AuthService {
     this.validatePassword(password);
 
     if (!name || !lastName) {
-      throw new HttpError(400, "Nombre y apellidos son obligatorios");
+      throw new HttpError(400, "auth.nameLastNameRequired");
     }
     if (!country) {
-      throw new HttpError(400, "El país es obligatorio");
+      throw new HttpError(400, "auth.countryRequired");
     }
 
     const exists = await this.repo.findByEmail(email);
     if (exists) {
-      throw new HttpError(409, "El usuario ya existe");
+      throw new HttpError(409, "auth.userExists");
     }
 
     const hashedPassword = await bcrypt.hash(password, 12);
@@ -62,8 +59,7 @@ export class AuthService {
       country,
     });
 
-    // ✅ asignación por ID (correcto)
-    await (user as any).$add("roles", DEFAULT_ROLE_IDS.MESERO);
+    await (user as any).addRole(DEFAULT_ROLE_IDS.MESERO);
 
     return this.generateAuthResponse(
       user.id,
@@ -77,18 +73,18 @@ export class AuthService {
 
     const user = await this.repo.findByEmail(email);
     if (!user) {
-      throw new HttpError(401, "Credenciales inválidas");
+      throw new HttpError(401, "auth.invalidCredentials");
     }
 
     const valid = await bcrypt.compare(password, user.password);
     if (!valid) {
-      throw new HttpError(401, "Credenciales inválidas");
+      throw new HttpError(401, "auth.invalidCredentials");
     }
 
     const roleIds = (user.roles ?? []).map((r) => r.id);
 
     if (roleIds.length === 0) {
-      throw new HttpError(403, "El usuario no tiene roles asignados");
+      throw new HttpError(403, "auth.noRolesAssigned");
     }
 
     return this.generateAuthResponse(user.id, user.email, roleIds);

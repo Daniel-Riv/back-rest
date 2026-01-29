@@ -35,4 +35,8 @@ export class AuthRepository {
       status: 1,
     });
   }
+
+  async findRoleByName(name: string) {
+    return Role.findOne({ where: { name, status: 1 } });
+  }
 }
