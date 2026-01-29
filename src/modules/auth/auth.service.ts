@@ -1,0 +1,101 @@
+import bcrypt from "bcrypt";
+import jwt from "jsonwebtoken";
+import { AuthRepository } from "./auth.repository.js";
+import { HttpError } from "../../shared/errors/HttpError.js";
+
+export class AuthService {
+  constructor(
+    private readonly repo = new AuthRepository()
+  ) {}
+
+
+  private validateEmail(email: string) {
+    const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!email || !regex.test(email)) {
+      throw new HttpError(400, "Email inválido");
+    }
+  }
+
+  private validatePassword(password: string) {
+    if (!password || password.length < 8) {
+      throw new HttpError(
+        400,
+        "La contraseña debe tener mínimo 8 caracteres"
+      );
+    }
+    if (!/[A-Z]/.test(password) || !/[0-9]/.test(password)) {
+      throw new HttpError(
+        400,
+        "La contraseña debe contener una mayúscula y un número"
+      );
+    }
+  }
+
+
+  async register(data: {
+    email: string;
+    password: string;
+    nombre: string;
+    apellidos: string;
+    telefono?: string;
+    pais: string;
+  }) {
+    const { email, password, nombre, apellidos, telefono, pais } = data;
+  
+    this.validateEmail(email);
+    this.validatePassword(password);
+  
+    if (!nombre || !apellidos) {
+      throw new HttpError(400, "Nombre y apellidos son obligatorios");
+    }
+  
+    if (!pais) {
+      throw new HttpError(400, "El país es obligatorio");
+    }
+  
+    const exists = await this.repo.findByEmail(email);
+    if (exists) {
+      throw new HttpError(409, "El usuario ya existe");
+    }
+  
+    const hashedPassword = await bcrypt.hash(password, 12);
+  
+    const user = await this.repo.createUser({
+      email,
+      password: hashedPassword,
+      nombre,
+      apellidos,
+      telefono,
+      pais,
+    });
+  
+    return this.generateToken(user.id, user.email);
+  }
+  
+
+  async login(email: string, password: string) {
+    this.validateEmail(email);
+
+    const user = await this.repo.findByEmail(email);
+    if (!user) {
+      throw new HttpError(401, "Credenciales inválidas");
+    }
+
+    const valid = await bcrypt.compare(password, user.password);
+    if (!valid) {
+      throw new HttpError(401, "Credenciales inválidas");
+    }
+
+    return this.generateToken(user.id, user.email);
+  }
+
+  private generateToken(userId: number, email: string) {
+    return {
+      token: jwt.sign(
+        { sub: userId, email },
+        process.env.JWT_SECRET!,
+        { expiresIn: "8h" }
+      ),
+    };
+  }
+}
