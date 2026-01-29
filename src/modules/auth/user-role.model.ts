@@ -1,5 +1,5 @@
 import { DataTypes, Model } from "sequelize";
-import { sequelize } from "../../config/database.js";
+import { sequelize } from "../../config/sequelize.js";
 
 export class UserRole extends Model {
   declare userId: number;
@@ -11,34 +11,18 @@ UserRole.init(
     userId: {
       type: DataTypes.INTEGER,
       allowNull: false,
-      field: "user_id",
-      references: {
-        model: "users",
-        key: "id",
-      },
-      onDelete: "CASCADE",
+      field: "id_user",
     },
-
     roleId: {
       type: DataTypes.INTEGER,
       allowNull: false,
-      field: "role_id",
-      references: {
-        model: "roles",
-        key: "id",
-      },
-      onDelete: "CASCADE",
+      field: "id_role",
     },
   },
   {
     sequelize,
     tableName: "user_roles",
     timestamps: false,
-    indexes: [
-      {
-        unique: true,
-        fields: ["user_id", "role_id"],
-      },
-    ],
+    indexes: [{ unique: true, fields: ["id_user", "id_role"] }],
   }
 );

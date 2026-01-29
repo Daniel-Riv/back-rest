@@ -2,12 +2,10 @@ import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { AuthRepository } from "./auth.repository.js";
 import { HttpError } from "../../shared/errors/HttpError.js";
+import { DEFAULT_ROLE_IDS } from "../rol/role.constants.js";
 
 export class AuthService {
-  constructor(
-    private readonly repo = new AuthRepository()
-  ) {}
-
+  constructor(private readonly repo = new AuthRepository()) {}
 
   private validateEmail(email: string) {
     const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -18,10 +16,7 @@ export class AuthService {
 
   private validatePassword(password: string) {
     if (!password || password.length < 8) {
-      throw new HttpError(
-        400,
-        "La contraseña debe tener mínimo 8 caracteres"
-      );
+      throw new HttpError(400, "La contraseña debe tener mínimo 8 caracteres");
     }
     if (!/[A-Z]/.test(password) || !/[0-9]/.test(password)) {
       throw new HttpError(
@@ -31,47 +26,51 @@ export class AuthService {
     }
   }
 
-
   async register(data: {
     email: string;
     password: string;
-    nombre: string;
-    apellidos: string;
-    telefono?: string;
-    pais: string;
+    name: string;
+    lastName: string;
+    phone?: string;
+    country: string;
   }) {
-    const { email, password, nombre, apellidos, telefono, pais } = data;
-  
+    const { email, password, name, lastName, phone, country } = data;
+
     this.validateEmail(email);
     this.validatePassword(password);
-  
-    if (!nombre || !apellidos) {
+
+    if (!name || !lastName) {
       throw new HttpError(400, "Nombre y apellidos son obligatorios");
     }
-  
-    if (!pais) {
+    if (!country) {
       throw new HttpError(400, "El país es obligatorio");
     }
-  
+
     const exists = await this.repo.findByEmail(email);
     if (exists) {
       throw new HttpError(409, "El usuario ya existe");
     }
-  
+
     const hashedPassword = await bcrypt.hash(password, 12);
-  
+
     const user = await this.repo.createUser({
       email,
       password: hashedPassword,
-      nombre,
-      apellidos,
-      telefono,
-      pais,
+      name,
+      lastName,
+      phone,
+      country,
     });
-  
-    return this.generateToken(user.id, user.email);
+
+    // ✅ asignación por ID (correcto)
+    await (user as any).$add("roles", DEFAULT_ROLE_IDS.MESERO);
+
+    return this.generateAuthResponse(
+      user.id,
+      user.email,
+      [DEFAULT_ROLE_IDS.MESERO]
+    );
   }
-  
 
   async login(email: string, password: string) {
     this.validateEmail(email);
@@ -86,16 +85,37 @@ export class AuthService {
       throw new HttpError(401, "Credenciales inválidas");
     }
 
-    return this.generateToken(user.id, user.email);
+    const roleIds = (user.roles ?? []).map((r) => r.id);
+
+    if (roleIds.length === 0) {
+      throw new HttpError(403, "El usuario no tiene roles asignados");
+    }
+
+    return this.generateAuthResponse(user.id, user.email, roleIds);
   }
 
-  private generateToken(userId: number, email: string) {
+  private generateAuthResponse(
+    userId: number,
+    email: string,
+    roleIds: number[]
+  ) {
+    const token = jwt.sign(
+      {
+        sub: userId,
+        email,
+        roleIds,
+      },
+      process.env.JWT_SECRET!,
+      { expiresIn: "8h" }
+    );
+
     return {
-      token: jwt.sign(
-        { sub: userId, email },
-        process.env.JWT_SECRET!,
-        { expiresIn: "8h" }
-      ),
+      token,
+      user: {
+        id: userId,
+        email,
+        roleIds,
+      },
     };
   }
 }
