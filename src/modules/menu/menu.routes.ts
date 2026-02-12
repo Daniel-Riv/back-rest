@@ -7,3 +7,5 @@ const controller = new MenuController();
 
 menuRoutes.post("/", authMiddleware, controller.create);
 menuRoutes.put("/role/:roleId", authMiddleware, controller.assignMenusToRole);
+
+menuRoutes.get("/role/:roleId", authMiddleware, controller.getMenusByRole);

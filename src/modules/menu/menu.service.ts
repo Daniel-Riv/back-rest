@@ -49,6 +49,33 @@ export class MenuService {
     };
   }
 
+
+  async getMenusByRole(roleId: number) {
+    if (!Number.isInteger(roleId) || roleId <= 0) {
+      throw new HttpError(400, "menu.invalidRoleId");
+    }
+
+    const role = await Role.findByPk(roleId);
+    if (!role) {
+      throw new HttpError(404, "menu.roleNotFound");
+    }
+
+    const menuIds = await this.roleMenuRepo.getMenuIdsByRoleId(roleId);
+    const menus = await this.repo.findByIds(menuIds);
+
+    return {
+      roleId,
+      menus: menus.map((menu) => ({
+        id: menu.id,
+        name: menu.name,
+        path: menu.path,
+        icon: menu.icon,
+        parentId: menu.parentId,
+        sortOrder: menu.sortOrder,
+        status: menu.status,
+      })),
+    };
+  }
   async assignMenusToRole(roleId: number, menuIds: number[]) {
     const role = await Role.findByPk(roleId);
     if (!role) {
