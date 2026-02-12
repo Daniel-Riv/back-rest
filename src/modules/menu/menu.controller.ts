@@ -13,6 +13,16 @@ export class MenuController {
     }
   };
 
+
+  getMenusByRole = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const roleId = Number(req.params.roleId);
+      const result = await this.service.getMenusByRole(roleId);
+      res.json(result);
+    } catch (error) {
+      next(error);
+    }
+  };
   assignMenusToRole = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const roleId = Number(req.params.roleId);

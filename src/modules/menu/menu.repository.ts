@@ -1,4 +1,5 @@
 import { Menu } from "./menu.model.js";
+import { Op } from "sequelize";
 
 export type CreateMenuData = {
   name: string;
@@ -17,6 +18,20 @@ export class MenuRepository {
       parentId: data.parentId ?? null,
       sortOrder: data.sortOrder ?? 0,
       status: 1,
+    });
+  }
+
+  async findByIds(ids: number[]) {
+    if (ids.length === 0) {
+      return [];
+    }
+
+    return Menu.findAll({
+      where: { id: { [Op.in]: ids } },
+      order: [
+        ["sortOrder", "ASC"],
+        ["id", "ASC"],
+      ],
     });
   }
 }
