@@ -3,6 +3,13 @@ import jwt from "jsonwebtoken";
 import { AuthRepository } from "./auth.repository.js";
 import { HttpError } from "../../shared/errors/HttpError.js";
 import { DEFAULT_ROLE_IDS } from "../rol/role.constants.js";
+import type { UserColors } from "./auth.model.js";
+
+const DEFAULT_USER_COLORS: UserColors = {
+  primary: "#0EA5E9",
+  secondary: "#111827",
+  tertiary: "#F8FAFC",
+};
 
 export class AuthService {
   constructor(private readonly repo = new AuthRepository()) {}
@@ -23,6 +30,31 @@ export class AuthService {
     }
   }
 
+  private normalizeColors(colors?: Partial<UserColors>): UserColors {
+    const merged: UserColors = {
+      primary: colors?.primary ?? DEFAULT_USER_COLORS.primary,
+      secondary: colors?.secondary ?? DEFAULT_USER_COLORS.secondary,
+      tertiary: colors?.tertiary ?? DEFAULT_USER_COLORS.tertiary,
+    };
+
+    const isValidColor = (value: string) =>
+      /^#([0-9A-F]{3}|[0-9A-F]{6})$/i.test(value.trim());
+
+    if (
+      !isValidColor(merged.primary) ||
+      !isValidColor(merged.secondary) ||
+      !isValidColor(merged.tertiary)
+    ) {
+      throw new HttpError(400, "auth.invalidColors");
+    }
+
+    return {
+      primary: merged.primary.trim(),
+      secondary: merged.secondary.trim(),
+      tertiary: merged.tertiary.trim(),
+    };
+  }
+
   async register(data: {
     email: string;
     password: string;
@@ -30,8 +62,9 @@ export class AuthService {
     lastName: string;
     phone?: string;
     country: string;
+    colors?: Partial<UserColors>;
   }) {
-    const { email, password, name, lastName, phone, country } = data;
+    const { email, password, name, lastName, phone, country, colors } = data;
 
     this.validateEmail(email);
     this.validatePassword(password);
@@ -50,6 +83,8 @@ export class AuthService {
 
     const hashedPassword = await bcrypt.hash(password, 12);
 
+    const normalizedColors = this.normalizeColors(colors);
+
     const user = await this.repo.createUser({
       email,
       password: hashedPassword,
@@ -57,6 +92,7 @@ export class AuthService {
       lastName,
       phone,
       country,
+      colors: normalizedColors,
     });
 
     await (user as any).addRole(DEFAULT_ROLE_IDS.MESERO);
@@ -64,7 +100,8 @@ export class AuthService {
     return this.generateAuthResponse(
       user.id,
       user.email,
-      [DEFAULT_ROLE_IDS.MESERO]
+      [DEFAULT_ROLE_IDS.MESERO],
+      user.colors
     );
   }
 
@@ -87,19 +124,26 @@ export class AuthService {
       throw new HttpError(403, "auth.noRolesAssigned");
     }
 
-    return this.generateAuthResponse(user.id, user.email, roleIds);
+    return this.generateAuthResponse(
+      user.id,
+      user.email,
+      roleIds,
+      user.colors ?? DEFAULT_USER_COLORS
+    );
   }
 
   private generateAuthResponse(
     userId: number,
     email: string,
-    roleIds: number[]
+    roleIds: number[],
+    colors: UserColors
   ) {
     const token = jwt.sign(
       {
         sub: userId,
         email,
         roleIds,
+        colors,
       },
       process.env.JWT_SECRET!,
       { expiresIn: "8h" }
@@ -111,6 +155,7 @@ export class AuthService {
         id: userId,
         email,
         roleIds,
+        colors,
       },
     };
   }

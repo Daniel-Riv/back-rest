@@ -1,5 +1,6 @@
 import { User } from "./auth.model.js";
 import { Role } from "../rol/roles.model.js";
+import type { UserColors } from "./auth.model.js";
 
 export class AuthRepository {
   async findByEmail(email: string) {
@@ -24,6 +25,7 @@ export class AuthRepository {
     lastName: string;
     phone?: string;
     country: string;
+    colors: UserColors;
   }) {
     return User.create({
       email: data.email,
@@ -32,6 +34,7 @@ export class AuthRepository {
       lastName: data.lastName,
       phone: data.phone ?? null,
       country: data.country,
+      colors: data.colors,
       status: 1,
     });
   }
