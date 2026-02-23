@@ -1,0 +1,16 @@
+import { Router } from "express";
+import { authMiddleware } from "../../shared/middleware/auth.middleware.js";
+import { TableController } from "./table.controller.js";
+
+export const tableRoutes = Router();
+const controller = new TableController();
+
+tableRoutes.get("/workspace", authMiddleware, controller.getWorkspace);
+
+tableRoutes.post("/zones", authMiddleware, controller.createZone);
+tableRoutes.put("/zones/:zoneId", authMiddleware, controller.updateZone);
+tableRoutes.delete("/zones/:zoneId", authMiddleware, controller.deleteZone);
+
+tableRoutes.post("/", authMiddleware, controller.createTable);
+tableRoutes.put("/:tableId", authMiddleware, controller.updateTable);
+tableRoutes.delete("/:tableId", authMiddleware, controller.deleteTable);

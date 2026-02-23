@@ -1,0 +1,13 @@
+import { Router } from "express";
+import { authMiddleware } from "../../shared/middleware/auth.middleware.js";
+import { IngredientController } from "./ingredient.controller.js";
+
+export const ingredientRoutes = Router();
+const controller = new IngredientController();
+
+ingredientRoutes.get("/", authMiddleware, controller.list);
+ingredientRoutes.post("/", authMiddleware, controller.create);
+ingredientRoutes.get("/:id/history", authMiddleware, controller.getHistory);
+ingredientRoutes.get("/:id", authMiddleware, controller.getById);
+ingredientRoutes.put("/:id", authMiddleware, controller.update);
+ingredientRoutes.delete("/:id", authMiddleware, controller.remove);

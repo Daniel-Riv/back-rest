@@ -1,5 +1,6 @@
 import { Menu } from "./menu.model.js";
 import { Op } from "sequelize";
+import { Submenu } from "./submenu.model.js";
 
 export type CreateMenuData = {
   name: string;
@@ -28,9 +29,18 @@ export class MenuRepository {
 
     return Menu.findAll({
       where: { id: { [Op.in]: ids } },
+      include: [
+        {
+          model: Submenu,
+          as: "submenus",
+          required: false,
+        },
+      ],
       order: [
         ["sortOrder", "ASC"],
         ["id", "ASC"],
+        [{ model: Submenu, as: "submenus" }, "sortOrder", "ASC"],
+        [{ model: Submenu, as: "submenus" }, "id", "ASC"],
       ],
     });
   }

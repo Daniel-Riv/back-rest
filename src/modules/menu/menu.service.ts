@@ -73,6 +73,16 @@ export class MenuService {
         parentId: menu.parentId,
         sortOrder: menu.sortOrder,
         status: menu.status,
+        submenus: (menu.submenus ?? []).map((submenu) => ({
+          id: submenu.id,
+          menuId: submenu.menuId,
+          nameEs: submenu.nameEs,
+          nameEn: submenu.nameEn,
+          path: submenu.path,
+          icon: submenu.icon,
+          sortOrder: submenu.sortOrder,
+          status: submenu.status,
+        })),
       })),
     };
   }

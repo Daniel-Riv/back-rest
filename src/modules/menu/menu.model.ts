@@ -1,5 +1,6 @@
-import { DataTypes, Model } from "sequelize";
+import { DataTypes, Model, NonAttribute } from "sequelize";
 import { sequelize } from "../../config/sequelize.js";
+import type { Submenu } from "./submenu.model.js";
 
 export class Menu extends Model {
   declare id: number;
@@ -9,6 +10,7 @@ export class Menu extends Model {
   declare parentId: number | null;
   declare sortOrder: number;
   declare status: number;
+  declare submenus?: NonAttribute<Submenu[]>;
 }
 
 Menu.init(
